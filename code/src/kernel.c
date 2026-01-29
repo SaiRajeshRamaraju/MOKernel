@@ -18,7 +18,7 @@ extern void write_port(unsigned short port, unsigned char data);
 extern unsigned char read_port(unsigned short port);
 extern void load_idt(unsigned long *);
 extern void keyboard_handler(void);
-
+#include "./memory_pagination.h"
 char *vidptr             = (char *)0xb8000;
 unsigned int current_loc = 0;
 
@@ -102,6 +102,9 @@ void kmain(void)
 {
         const char *str = "Kernel Message";
         unsigned int i  = 0;
+	    volatile uint32_t *test = (uint32_t *)0x00100000; // 1 MB
+		*test = 0xDEADBEEF;
+
 
         for (unsigned int j = 0; j < 80 * 25 * 2; j += 2)
         {

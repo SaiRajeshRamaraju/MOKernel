@@ -10,25 +10,6 @@ This project is a minimal operating system kernel for 32-bit x86 architecture. I
 - Bootable ISO generation
 
 ---
-##  Project Structure
-
-```
-
-.
-├── build.sh             # Build script to compile and create ISO
-├── link.ld              # Linker script (loads kernel at 0x100000)
-├── kernel.c             # Kernel logic (IDT, keyboard handler, screen output)
-├── start.asm            # Assembly boot code, IDT loader, port I/O
-├── grub.cfg             # GRUB bootloader config
-├── isodir/
-│   └── boot/
-│       └── grub/
-│           └── grub.cfg
-└── kernel.iso           # Final bootable ISO (generated)
-
-````
-
----
 
 ##  Requirements
 
