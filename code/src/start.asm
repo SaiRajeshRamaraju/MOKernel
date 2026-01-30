@@ -1,11 +1,13 @@
 
 bits 32
-section .text
+section .multiboot
     ; Multiboot header (aligned and checksummed)
     align 4
     dd 0x1BADB002         ; Magic number
     dd 0x00               ; Flags
     dd -(0x1BADB002 + 0x00) ; Checksum
+
+section .text
 
 global start
 global read_port
@@ -34,6 +36,15 @@ load_idt:
 
 keyboard_handler:
     call keyboard_handler_main
+    iret
+
+global page_fault_stub
+extern page_fault_handler
+page_fault_stub:
+    ; Page Fault pushes an error code automatically
+    ; We might want to save registers here , I don't know what is going on
+    call page_fault_handler
+    add esp, 4 ; Remove error code
     iret
 
 start:

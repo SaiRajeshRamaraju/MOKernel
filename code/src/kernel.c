@@ -18,7 +18,8 @@ extern void write_port(unsigned short port, unsigned char data);
 extern unsigned char read_port(unsigned short port);
 extern void load_idt(unsigned long *);
 extern void keyboard_handler(void);
-#include "./memory_pagination.h"
+extern void page_fault_stub(void);
+#include "./paging.h"
 char *vidptr             = (char *)0xb8000;
 unsigned int current_loc = 0;
 
@@ -93,6 +94,14 @@ void idt_init(void)
         write_port(0x21, 0xFD); // enable only IRQ1 (keyboard)
         write_port(0xA1, 0xFF);
 
+        /* Register Page Fault Handler (Vector 14) */
+        unsigned long pf_address = (unsigned long)page_fault_stub;
+        IDT[14].offset_lowerbits  = pf_address & 0xFFFF;
+        IDT[14].selector          = 0x08;
+        IDT[14].zero              = 0;
+        IDT[14].type_attr         = 0x8E; // Interrupt Gate
+        IDT[14].offset_higherbits = (pf_address >> 16) & 0xFFFF;
+
         idt_ptr[0] = (sizeof(struct IDT_entry) * IDT_SIZE) | ((idt_address & 0xFFFF) << 16);
         idt_ptr[1] = idt_address >> 16;
         load_idt((unsigned long *)idt_ptr);
@@ -100,6 +109,18 @@ void idt_init(void)
 
 void kmain(void)
 {
+        // kernel still not booting , struct on booting from ROM .
+        const char *boot_msg = "Booting MOKernel...";
+        unsigned int k = 0;
+        /* Print simple message directly to VGA to verify boot */
+        while(boot_msg[k] != '\0') {
+            vidptr[k*2] = boot_msg[k];
+            vidptr[k*2+1] = 0x02; // Green
+            k++;
+        }
+        current_loc = 160; // Next line
+
+        paging_init(); // Initialize Paging
         const char *str = "Kernel Message";
         unsigned int i  = 0;
 	    volatile uint32_t *test = (uint32_t *)0x00100000; // 1 MB
