@@ -12,11 +12,11 @@ rm -f $OUT_DIR/kernel.bin $OUT_DIR/kernel.iso
 mkdir -p $GRUB_DIR
 
 # Compile kernel
-nasm -f elf32 start.asm -o start.o
-gcc -m32 -ffreestanding -fno-stack-protector -c kernel.c -o kernel.o
-gcc -m32 -ffreestanding -fno-stack-protector -c paging.c -o paging.o
-gcc -m32 -ffreestanding -fno-stack-protector -c pmm.c -o pmm.o
-gcc -m32 -ffreestanding -fno-stack-protector -c swap.c -o swap.o
+nasm -f elf32 -g start.asm -o start.o
+gcc -m32 -ffreestanding -fno-stack-protector -g -c kernel.c -o kernel.o
+gcc -m32 -ffreestanding -fno-stack-protector -g -c paging.c -o paging.o
+gcc -m32 -ffreestanding -fno-stack-protector -g -c pmm.c -o pmm.o
+gcc -m32 -ffreestanding -fno-stack-protector -g -c swap.c -o swap.o
 ld -m elf_i386 -T link.ld -o $OUT_DIR/kernel.bin start.o kernel.o paging.o pmm.o swap.o
 
 # Copy to ISO structure
