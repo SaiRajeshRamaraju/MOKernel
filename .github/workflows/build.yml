@@ -14,17 +14,17 @@ jobs:
     steps:
       - name: Update and install system dependencies
         run: |
-          sudo pacman -Syu --noconfirm
-          sudo pacman -S --noconfirm git base-devel nasm xorriso grub mtools
+          sudo apt-get update
+          sudo apt-get install -y git base-devel nasm xorriso grub-pc-bin mtools
 
       - name: Enable multilib and install 32-bit toolchain
         run: |
           # Ensure multilib is enabled for gcc-multilib if not already
-          if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
-            echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
+          if ! grep -q "^\[multilib\]" /etc/apt/sources.list; then
+            echo -e "\n[multilib]\nInclude = /etc/apt/sources.list" | sudo tee -a /etc/apt/sources.list
           fi
-          sudo pacman -Sy --noconfirm
-          sudo pacman -S --noconfirm gcc-multilib
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib
 
       - name: Checkout code
         uses: actions/checkout@v4
