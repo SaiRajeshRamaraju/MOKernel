@@ -1,48 +1,49 @@
-name: Build Kernel
+name: Build and Release Binary
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches:
+      - main
+
+permissions:
+  contents: write
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install build dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            build-essential \
-            gcc-multilib \
-            nasm \
-            xorriso \
-            grub-pc-bin \
-            grub-common \
-            mtools \
-            make \
-            git
-
-      - name: Build Kernel and ISO
-        run: |
-          cd code/src
-          chmod +x build.sh
-          ./build.sh
-
-      - name: Upload Kernel Binary
-        uses: actions/upload-artifact@v4
         with:
-          name: kernel-binary
-          path: code/kernel.bin
+          fetch-depth: 0
 
-      - name: Upload Kernel ISO
-        uses: actions/upload-artifact@v4
+      - name: Get latest tag
+        id: tag
+        run: |
+          git fetch --tags
+          latest=$(git tag --sort=-v:refname | head -n 1)
+          if [ -z "$latest" ]; then
+            echo "version=0.0.1" >> $GITHUB_OUTPUT
+          else
+            IFS='.' read -r major minor patch <<< "${latest#v}"
+            patch=$((patch + 1))
+            echo "version=$major.$minor.$patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build binary
+        run: |
+          make build   # or go build / cargo build / etc.
+          mv mybinary mybinary-${{ steps.tag.outputs.version }}
+
+      - name: Create Git tag
+        run: |
+          git tag v${{ steps.tag.outputs.version }}
+          git push origin v${{ steps.tag.outputs.version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: kernel-iso
-          path: code/kernel.iso
+          tag_name: v${{ steps.tag.outputs.version }}
+          name: Release v${{ steps.tag.outputs.version }}
+          files: mybinary-${{ steps.tag.outputs.version }}
