@@ -12,22 +12,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Update and install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y git base-devel nasm xorriso grub-pc-bin mtools
-
-      - name: Enable multilib and install 32-bit toolchain
-        run: |
-          # Ensure multilib is enabled for gcc-multilib if not already
-          if ! grep -q "^\[multilib\]" /etc/apt/sources.list; then
-            echo -e "\n[multilib]\nInclude = /etc/apt/sources.list" | sudo tee -a /etc/apt/sources.list
-          fi
-          sudo apt-get update
-          sudo apt-get install -y gcc-multilib
-
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            build-essential \
+            gcc-multilib \
+            nasm \
+            xorriso \
+            grub-pc-bin \
+            grub-common \
+            mtools \
+            make \
+            git
 
       - name: Build Kernel and ISO
         run: |
