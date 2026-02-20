@@ -1,0 +1,48 @@
+name: Build Kernel
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: arch-latest
+
+    steps:
+      - name: Update and install system dependencies
+        run: |
+          sudo pacman -Syu --noconfirm
+          sudo pacman -S --noconfirm git base-devel nasm xorriso grub mtools
+
+      - name: Enable multilib and install 32-bit toolchain
+        run: |
+          # Ensure multilib is enabled for gcc-multilib if not already
+          if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
+            echo -e "\n[multilib]\nInclude = /etc/pacman.d/mirrorlist" | sudo tee -a /etc/pacman.conf
+          fi
+          sudo pacman -Sy --noconfirm
+          sudo pacman -S --noconfirm gcc-multilib
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Kernel and ISO
+        run: |
+          cd code/src
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Upload Kernel Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-binary
+          path: code/kernel.bin
+
+      - name: Upload Kernel ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-iso
+          path: code/kernel.iso
