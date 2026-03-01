@@ -22,8 +22,12 @@ global read_port
 global write_port
 global load_idt
 global keyboard_handler
+global timer_handler
+global mouse_handler
 extern kmain
 extern keyboard_handler_main
+extern timer_handler_main
+extern mouse_handler_main
 
 ; Function: read_port
 ; Description: Reads a byte from an I/O port.
@@ -54,7 +58,25 @@ load_idt:
 ; Function: keyboard_handler
 ; Description: ISR for keyboard interrupts. Calls C handler.
 keyboard_handler:
+    pusha
     call keyboard_handler_main
+    popa
+    iret
+
+; Function: timer_handler
+; Description: ISR for timer interrupts. Calls C handler.
+timer_handler:
+    pusha
+    call timer_handler_main
+    popa
+    iret
+
+; Function: mouse_handler
+; Description: ISR for mouse interrupts. Calls C handler.
+mouse_handler:
+    pusha
+    call mouse_handler_main
+    popa
     iret
 
 global page_fault_stub
@@ -63,9 +85,10 @@ extern page_fault_handler
 ; Description: ISR for Page Faults (Int 14).
 page_fault_stub:
     ; Page Fault pushes an error code automatically onto the stack.
-    ; We should save registers here (pusha) if we want to return to the interrupted code safely,
-    ; but for this simple kernel we just call the handler.
+    ; We should save registers here (pusha) if we want to return to the interrupted code safely.
+    pusha
     call page_fault_handler
+    popa
     add esp, 4 ; Remove error code pushed by CPU
     iret
 
@@ -89,6 +112,11 @@ start:
     ; Correct usage: Point ESP to the top of the stack (which grows down).
     ; Since `stack_space` is after the `resb`, it is already at the top.
     mov esp, stack_space
+    
+    ; DEBUG: write 'X' to 0x3F8 directly
+    mov dx, 0x3f8
+    mov al, 'X'
+    out dx, al
     
     ; Jump to higher level C Kernel
     call kmain

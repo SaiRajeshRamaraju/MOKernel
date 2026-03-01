@@ -17,7 +17,8 @@ gcc -m32 -ffreestanding -fno-stack-protector -g -c kernel.c -o kernel.o
 gcc -m32 -ffreestanding -fno-stack-protector -g -c paging.c -o paging.o
 gcc -m32 -ffreestanding -fno-stack-protector -g -c pmm.c -o pmm.o
 gcc -m32 -ffreestanding -fno-stack-protector -g -c swap.c -o swap.o
-ld -m elf_i386 -T link.ld -o $OUT_DIR/kernel.bin start.o kernel.o paging.o pmm.o swap.o
+gcc -m32 -ffreestanding -fno-stack-protector -g -c fs.c -o fs.o
+ld -m elf_i386 -T link.ld -o $OUT_DIR/kernel.bin start.o kernel.o paging.o pmm.o swap.o fs.o
 
 # Copy to ISO structure
 cp $OUT_DIR/kernel.bin $BOOT_DIR/kernel.bin
