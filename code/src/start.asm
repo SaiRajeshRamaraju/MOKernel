@@ -8,9 +8,12 @@
 
 bits 32
 section .multiboot
+    ; Entry point for our custom 16-bit bootloader to jump to at 0x100000
+    jmp start
+
+    align 4
     ; Multiboot header (aligned and checksummed)
     ; This header tells the bootloader (like GRUB) that this is a valid kernel.
-    align 4
     dd 0x1BADB002         ; Magic number (Multiboot 1)
     dd 0x00               ; Flags (0 means no special requests)
     dd -(0x1BADB002 + 0x00) ; Checksum (Magic + Flags + Checksum must equal 0)
