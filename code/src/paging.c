@@ -18,23 +18,6 @@ uint32_t page_directory[PAGE_ENTRIES];
 __attribute__((aligned(PAGE_SIZE)))
 uint32_t first_page_table[PAGE_ENTRIES];
 
-/* 
-   Helper to print simple strings. 
-   Duplicated from kernel.c slightly or we should expose it from kernel.c 
-   but for now we keep it minimal here or just don't print complex things.
-*/
-static void print_string(const char *str) {
-    char *v = (char*)0xb8000; // default VGA
-    // This is VERY hacky, relying on global current_loc external
-    // Ideally we expose a proper print function.
-    /* For safety, let's just do a direct write if we panic? 
-       Actually, let's just write to the buffer at current_loc if possible,
-       but we need access to 'current_loc'.
-    */
-    /* simplified assumption: we just won't print for now inside this file 
-       unless we link against kernel generic print. */
-}
-
 void paging_init(void)
 {
     uint32_t i;
@@ -147,10 +130,11 @@ void page_fault_handler(void)
         return; // Resume execution
     }
 
+    char *video;
+
 panic:
     /* Original Panic Code */
-    char *video = (char*)0xb8000;
-    
+    video = (char*)0xb8000;
     const char *msg = "PAGE FAULT DETECTED!";
     int i = 0;
     while(msg[i]) {

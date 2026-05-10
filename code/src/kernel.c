@@ -26,6 +26,7 @@ extern void page_fault_stub(void);
 #include "./paging.h"
 #include "./swap.h"
 #include "./fs.h"
+#include "./net.h"
 
 char *vidptr             = (char *)0xb8000;
 unsigned int current_loc = 0;
@@ -116,18 +117,64 @@ void execute_command(char* cmd) {
         // do nothing
     } else if (strcmp(c, "help") == 0) {
         kprint("Commands: \n");
-        kprint("  help  - Show this message\n");
-        kprint("  clear - Clear screen\n");
-        kprint("  echo  - Print text (echo <msg>)\n");
-        kprint("  info  - Show system info\n");
-        kprint("  ls    - List all files\n");
-        kprint("  touch - Create empty file (touch <filename>)\n");
-        kprint("  write - Write text to file (write <filename> <content>)\n");
-        kprint("  cat   - Read file content (cat <filename>)\n");
+        kprint("  help     - Show this message\n");
+        kprint("  clear    - Clear screen\n");
+        kprint("  echo     - Print text (echo <msg>)\n");
+        kprint("  info     - Show system info\n");
+        kprint("  pwd      - Show current directory\n");
+        kprint("  ls       - List files in current directory\n");
+        kprint("  mkdir    - Create a directory (mkdir <name>)\n");
+        kprint("  cd       - Change directory (cd <name> | .. | .)\n");
+        kprint("  touch    - Create empty file (touch <name>)\n");
+        kprint("  write    - Write text to file (write <name> <content>)\n");
+        kprint("  cat      - Read file content (cat <name>)\n");
+        kprint("  rm       - Delete a file (rm <name>)\n");
+        kprint("  rmdir    - Delete an empty directory (rmdir <name>)\n");
+        kprint("  ifconfig - Show network interface info\n");
+        kprint("  arp      - Show ARP cache\n");
+        kprint("  ping     - Ping an IP (ping <ip>)\n");
+        kprint("  udp      - Send UDP packet (udp <ip> <port> <msg>)\n");
     } else if (strcmp(c, "clear") == 0) {
         clear_screen();
+    } else if (strcmp(c, "pwd") == 0) {
+        fs_pwd();
     } else if (strcmp(c, "ls") == 0) {
+        fs_pwd();
         fs_list_files();
+    } else if (strncmp(c, "mkdir ", 6) == 0) {
+        char *dname = c + 6;
+        while (*dname == ' ') dname++;
+        if (*dname != '\0') {
+            fs_mkdir(dname);
+        } else {
+            kprint("Usage: mkdir <name>\n");
+        }
+    } else if (strncmp(c, "cd ", 3) == 0) {
+        char *dname = c + 3;
+        while (*dname == ' ') dname++;
+        if (*dname != '\0') {
+            fs_cd(dname);
+        } else {
+            kprint("Usage: cd <name>\n");
+        }
+    } else if (strcmp(c, "cd") == 0) {
+        fs_cd("/");
+    } else if (strncmp(c, "rm ", 3) == 0) {
+        char *fname = c + 3;
+        while (*fname == ' ') fname++;
+        if (*fname != '\0') {
+            fs_rm(fname);
+        } else {
+            kprint("Usage: rm <name>\n");
+        }
+    } else if (strncmp(c, "rmdir ", 6) == 0) {
+        char *dname = c + 6;
+        while (*dname == ' ') dname++;
+        if (*dname != '\0') {
+            fs_rmdir(dname);
+        } else {
+            kprint("Usage: rmdir <name>\n");
+        }
     } else if (strncmp(c, "touch ", 6) == 0) {
         char *filename = c + 6;
         while (*filename == ' ') filename++;
@@ -163,7 +210,42 @@ void execute_command(char* cmd) {
         kprint(c + 5);
         kprint("\n");
     } else if (strcmp(c, "info") == 0) {
-        kprint("MOKernel - Now with Terminal, Shift keys & Mouse support!\n");
+        kprint("MOKernel - Terminal | Paging | FS | Networking\n");
+    } else if (strcmp(c, "ifconfig") == 0) {
+        net_cmd_ifconfig();
+    } else if (strcmp(c, "arp") == 0) {
+        net_poll();
+        net_cmd_arp();
+    } else if (strncmp(c, "ping ", 5) == 0) {
+        char *ipstr = c + 5;
+        while (*ipstr == ' ') ipstr++;
+        ip_addr_t target;
+        if (parse_ip(ipstr, &target)) {
+            net_cmd_ping(target);
+        } else {
+            kprint("Invalid IP. Usage: ping <a.b.c.d>\n");
+        }
+    } else if (strncmp(c, "udp ", 4) == 0) {
+        // udp <ip> <port> <msg>
+        char *args = c + 4;
+        while (*args == ' ') args++;
+        // parse IP
+        char ipbuf[20];
+        int i = 0;
+        while (*args && *args != ' ' && i < 19) ipbuf[i++] = *args++;
+        ipbuf[i] = '\0';
+        while (*args == ' ') args++;
+        // parse port
+        unsigned int port = 0;
+        while (*args >= '0' && *args <= '9') { port = port * 10 + (*args - '0'); args++; }
+        while (*args == ' ') args++;
+        ip_addr_t dst;
+        if (parse_ip(ipbuf, &dst) && port > 0 && *args) {
+            udp_send(dst, 1234, (unsigned short)port, (const unsigned char *)args, (unsigned short)(sizeof(ipbuf)-i));
+            kprint("UDP packet sent\n");
+        } else {
+            kprint("Usage: udp <ip> <port> <msg>\n");
+        }
     } else {
         kprint("Unknown param or command: ");
         kprint(c);
@@ -573,6 +655,9 @@ void kmain(void)
 
         kprint("Initializing File System...\n");
         fs_init();
+
+        kprint("Initializing Network Stack...\n");
+        net_stack_init();
 
         // Draw initial cursor
         update_mouse_cursor(1);
